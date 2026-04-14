@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: gics-db
+spec:
+  selector: { }
+  serviceName: gics-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.life.uni-leipzig.de/redundancy: none
+        app.life.uni-leipzig.de/service-level: silver
+    spec:
+      enableServiceLinks: false
+      initContainers:
+      - name: copy-init-sql
+        image: mosaicgreifswald/gics:2025.2.0@sha256:56ea729ddba0ab110c945b5bd649055406ef55bf2a3f9fe85932e88cbe09c75d
+        command: [ "/bin/sh", "-c" ]
+        args:
+        - |
+          set -eu
+          cp /entrypoint-help-and-usage/examples/compose-gics/sqls/*.sql /docker-entrypoint-initdb.d/
+          cat >/docker-entrypoint-initdb.d/99-rotate-passwords.sql <<SQL
+          ALTER USER 'gics_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+          ALTER USER 'gras_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+          ALTER USER 'noti_user'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+          SQL
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gics-db-credentials
+              key: password
+        volumeMounts:
+        - name: init-sql
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            memory: "64Mi"
+      containers:
+      - name: mysql
+        image: mysql:9.6.0@sha256:24e450bbd24f621c71b10404c946cc9ea1cbb0e6e7464b2be2de5193dcf1d05b
+        args:
+        - --max_allowed_packet=20M
+        - --default-time-zone=Europe/Berlin
+        ports:
+        - name: mysql
+          containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gics-db-credentials
+              key: root-password
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        - name: init-sql
+          mountPath: /docker-entrypoint-initdb.d
+        startupProbe:
+          exec:
+            command: [ "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$(MYSQL_ROOT_PASSWORD)" ]
+          failureThreshold: 24
+          periodSeconds: 10
+        readinessProbe: &probe
+          exec:
+            command: [ "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$(MYSQL_ROOT_PASSWORD)" ]
+        livenessProbe: *probe
+        resources:
+          requests:
+            cpu: "125m"
+            memory: "2Gi"
+          limits:
+            memory: "2Gi"
+      volumes:
+      - name: init-sql
+        emptyDir: { }
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      storageClassName: vsan
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi

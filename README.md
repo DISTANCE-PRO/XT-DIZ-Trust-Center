@@ -10,21 +10,32 @@ Namespace: `distance-xt-trust-center`
   - Ingress: `https://gics.distance-xt.life.uni-leipzig.local/gics/...`
 - **gpas** — gPAS (pseudonymization). App + MySQL.
   - Ingress: `https://gpas.distance-xt.life.uni-leipzig.local/gpas/...`
+- **tc-agent** — FTS-next trust-center agent, with Valkey keystore.
+  - Ingress: `https://tc-agent.distance-xt.life.uni-leipzig.local/`
+
+## Database bootstrap
+
+gICS/gPAS do not self-initialize. An initContainer on each db StatefulSet copies the SQL shipped inside the app image (
+`/entrypoint-help-and-usage/examples/compose-g{ics,pas}/sqls/*.sql`) into the MySQL `/docker-entrypoint-initdb.d/`
+volume, stripping `CREATE USER` / `GRANT ALL` lines (the user is already created from `MYSQL_USER`/`MYSQL_PASSWORD`).
+MySQL's first-start guard makes this idempotent.
+
+## Schema migrations — TODO
+
+Mosaic ships numbered upgrade scripts at `/entrypoint-help-and-usage/examples/compose-g{ics,pas}/update_sqls/` inside
+the app image, e.g. `03_update_database_gpas_2025.1.2_2025.2.0.sql`. They are **not applied automatically** and are *
+*not idempotent across versions** (older scripts may `ALTER`/`DROP` against a newer schema).
+
+We need to apply migrations manually.
 
 ## Required CI variables
 
-Assembled into a `credentials` secret by `.app/apply`:
+Assembled into `gics/gpas-db-credentials` secrets by `.app/apply`:
 
 - `GICS_DB_PASSWORD`, `GICS_DB_ROOT_PASSWORD`
 - `GPAS_DB_PASSWORD`, `GPAS_DB_ROOT_PASSWORD`
 
 ## Open items
 
-- **tc-agent (FTS-next trust-center agent)** — not yet scaffolded. Decision
-  pending: shared single instance here, or per-DIZ in each DIZ namespace? (see
-  `PLANNING.md`).
-- Initdb scripts from the FTS-next reference compose (`gics/initdb/`,
-  `gpas/initdb/`) are not wired in. Either mount as ConfigMap or pre-seed the
-  PVC; confirm whether the vendor images auto-bootstrap on an empty DB.
 - Notification services (`TTP_DISABLE_NOTI_*`) currently off — matches the
   FTS-next test compose. Revisit for prod.
