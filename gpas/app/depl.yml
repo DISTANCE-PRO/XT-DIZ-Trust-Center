@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpas
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector: { }
+  template:
+    metadata:
+      labels:
+        app.life.uni-leipzig.de/redundancy: none
+        app.life.uni-leipzig.de/service-level: silver
+    spec:
+      enableServiceLinks: false
+      containers:
+      - name: gpas
+        image: mosaicgreifswald/gpas:2025.2.0@sha256:e61946ae994e658ecdeb5dfc86b4102d248e22cfdde10b6c6e6dfefeb654739c
+        ports:
+        - name: http
+          containerPort: 8080
+        env:
+        - name: TTP_GPAS_DB_HOST
+          value: "gpas-db"
+        - name: TTP_GRAS_DB_HOST
+          value: "gpas-db"
+        - name: TTP_NOTI_DB_HOST
+          value: "gpas-db"
+        - name: TTP_GPAS_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: gpas-db-credentials
+              key: password
+        - name: TTP_GRAS_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: gpas-db-credentials
+              key: password
+        - name: TTP_NOTI_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: gpas-db-credentials
+              key: password
+        - name: WF_NO_ADMIN
+          value: "true"
+        - name: TTP_DISABLE_NOTI_CLIENT
+          value: "true"
+        - name: TTP_DISABLE_NOTI_SERVICE
+          value: "true"
+        startupProbe:
+          httpGet: &probe
+            path: /gpas/gpasService?wsdl
+            port: http
+          failureThreshold: 24
+          periodSeconds: 10
+        readinessProbe:
+          httpGet: *probe
+        livenessProbe:
+          httpGet: *probe
+        resources:
+          requests:
+            cpu: "125m"
+            memory: "2Gi"
+          limits:
+            memory: "2Gi"

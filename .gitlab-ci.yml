@@ -1,0 +1,35 @@
+include:
+- component: $CI_SERVER_FQDN/util/k8s-ci/kustomize@0.3.1
+  inputs:
+    prune: [ core/v1/Secret, core/v1/ConfigMap,
+             apps/v1/StatefulSet, apps/v1/Deployment,
+             core/v1/Service, networking.k8s.io/v1/Ingress,
+             networking.k8s.io/v1/NetworkPolicy ]
+    envsubst: [ 'NONE' ]
+
+# Credentials for gICS/gPAS apps + their MySQL sidecars live in a single
+# per-namespace secret. Added at the root so both gics/ and gpas/ see it.
+.app/apply:
+  before_script:
+  - kustomize edit add secret gics-db-credentials
+    --from-literal=password="${GICS_DB_PASSWORD}"
+    --from-literal=root-password="${GICS_DB_ROOT_PASSWORD}"
+  - kustomize edit add secret gpas-db-credentials
+    --from-literal=password="${GPAS_DB_PASSWORD}"
+    --from-literal=root-password="${GPAS_DB_ROOT_PASSWORD}"
+
+app/validate:
+  variables:
+    CI_ENVIRONMENT_SLUG: res
+
+app/deploy:test:
+  rules:
+  - when: never
+
+app/deploy:prod:
+  environment:
+    name: res
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_MERGE_REQUEST_LABELS =~ /hint::autodeploy/
+  - when: manual

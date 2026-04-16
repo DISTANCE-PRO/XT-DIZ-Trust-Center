@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gics
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector: { }
+  template:
+    metadata:
+      labels:
+        app.life.uni-leipzig.de/redundancy: none
+        app.life.uni-leipzig.de/service-level: silver
+    spec:
+      enableServiceLinks: false
+      containers:
+      - name: gics
+        image: mosaicgreifswald/gics:2025.2.0@sha256:56ea729ddba0ab110c945b5bd649055406ef55bf2a3f9fe85932e88cbe09c75d
+        ports:
+        - name: http
+          containerPort: 8080
+        env:
+        - name: TTP_GICS_DB_HOST
+          value: "gics-db"
+        - name: TTP_GRAS_DB_HOST
+          value: "gics-db"
+        - name: TTP_NOTI_DB_HOST
+          value: "gics-db"
+        - name: TTP_GICS_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: gics-db-credentials
+              key: password
+        - name: TTP_GRAS_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: gics-db-credentials
+              key: password
+        - name: TTP_NOTI_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: gics-db-credentials
+              key: password
+        - name: WF_NO_ADMIN
+          value: "true"
+        - name: TTP_DISABLE_NOTI_CLIENT
+          value: "true"
+        - name: TTP_DISABLE_NOTI_SERVICE
+          value: "true"
+        startupProbe:
+          httpGet: &probe
+            path: /gics/gicsService?wsdl
+            port: http
+          failureThreshold: 24
+          periodSeconds: 10
+        readinessProbe:
+          httpGet: *probe
+        livenessProbe:
+          httpGet: *probe
+        resources:
+          requests:
+            cpu: "125m"
+            memory: "2Gi"
+          limits:
+            memory: "2Gi"
