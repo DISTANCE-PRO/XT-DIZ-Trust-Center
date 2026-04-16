@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tc-agent
+spec:
+  rules:
+  - host: tc-agent.distance-xt.life.uni-leipzig.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tc-agent
+            port:
+              name: http

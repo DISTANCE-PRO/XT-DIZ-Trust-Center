@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tc-agent-keystore
+spec:
+  serviceName: keystore
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector: { }
+  template:
+    metadata:
+      labels:
+        app.life.uni-leipzig.de/redundancy: none
+        app.life.uni-leipzig.de/service-level: silver
+    spec:
+      enableServiceLinks: false
+      containers:
+      - name: valkey
+        image: valkey/valkey:9.0.3-alpine@sha256:e1095c6c76ee982cb2d1e07edbb7fb2a53606630a1d810d5a47c9f646b708bf5
+        args: [ "--save", "60", "1", "--appendonly", "yes" ]
+        ports:
+        - name: redis
+          containerPort: 6379
+        startupProbe:
+          exec: &probe
+            command: [ "redis-cli", "--raw", "incr", "ping" ]
+          failureThreshold: 12
+          periodSeconds: 5
+        readinessProbe:
+          exec: *probe
+        livenessProbe:
+          exec: *probe
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "256Mi"
+          limits:
+            memory: "256Mi"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
