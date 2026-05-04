@@ -17,6 +17,9 @@ include:
   - kustomize edit add secret gpas-db-credentials
     --from-literal=password="${GPAS_DB_PASSWORD}"
     --from-literal=root-password="${GPAS_DB_ROOT_PASSWORD}"
+  - kustomize edit add secret oidc-credentials
+    --from-literal=web-client-secret="${TTP_WEB_CLIENT_SECRET}"
+    --from-literal=fhir-client-secret="${TTP_FHIR_CLIENT_SECRET}"
 
 app/validate:
   variables:

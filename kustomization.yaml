@@ -5,6 +5,13 @@ labels:
 - pairs:
     app.kubernetes.io/part-of: distance-xt-trust-center
 
+# Mitigate wildfly not using `X-Forwarded-*` headers
+configMapGenerator:
+- name: wildfly-cli
+  files:
+  - proxy-forwarding.cli
+
 resources:
 - gics/
 - gpas/
+- netpol.yaml

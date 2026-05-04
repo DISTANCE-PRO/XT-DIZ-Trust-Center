@@ -13,6 +13,19 @@ spec:
         app.life.uni-leipzig.de/service-level: silver
     spec:
       enableServiceLinks: false
+      initContainers:
+      - name: import-ca-certs
+        image: eclipse-temurin:21-jdk
+        env:
+        - name: USE_SYSTEM_CA_CERTS
+          value: "true"
+        args: [ "sh", "-c", "cp ${JRE_CACERTS_PATH:-/opt/java/openjdk/lib/security/cacerts} /cacerts/cacerts" ]
+        volumeMounts:
+        - name: ca-certs
+          mountPath: /certificates
+          readOnly: true
+        - name: cacerts
+          mountPath: /cacerts
       containers:
       - name: gics
         image: mosaicgreifswald/gics:2025.2.0@sha256:56ea729ddba0ab110c945b5bd649055406ef55bf2a3f9fe85932e88cbe09c75d
@@ -43,13 +56,39 @@ spec:
               key: password
         - name: WF_NO_ADMIN
           value: "true"
-        - name: TTP_DISABLE_NOTI_CLIENT
+        - name: MOS_INCLUDE_PROCESSES
+          value: "wildfly"
+        - name: TTP_KEYCLOAK_REALM
+          value: "distance-xt"
+        - name: TTP_KEYCLOAK_SERVER_URL
+          value: "https://auth.distance-xt.life.uni-leipzig.local"
+        - name: TTP_KEYCLOAK_SSL_REQUIRED
+          value: "external"
+        - name: TTP_KEYCLOAK_CONFIDENTIAL_PORT
+          value: "443"
+        - name: TTP_WEB_KEYCLOAK_CLIENT_ID
+          value: "trust-center-web"
+        - name: TTP_WEB_KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: oidc-credentials
+              key: web-client-secret
+        - name: TTP_FHIR_KEYCLOAK_CLIENT_ID
+          value: "trust-center-fhir"
+        - name: TTP_FHIR_KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: oidc-credentials
+              key: fhir-client-secret
+        - name: TTP_GICS_WEB_AUTH_MODE
+          value: "keycloak"
+        - name: TTP_FHIR_KEYCLOAK_ENABLE
           value: "true"
-        - name: TTP_DISABLE_NOTI_SERVICE
-          value: "true"
+        - name: TTP_GICS_AUTH_DOMAIN_ROLES
+          value: "FORCED"
         startupProbe:
           httpGet: &probe
-            path: /gics/gicsService?wsdl
+            path: /
             port: http
           failureThreshold: 24
           periodSeconds: 10
@@ -60,6 +99,27 @@ spec:
         resources:
           requests:
             cpu: "125m"
-            memory: "2Gi"
+            memory: "3Gi"
           limits:
-            memory: "2Gi"
+            memory: "3Gi"
+        volumeMounts:
+        - name: cacerts
+          mountPath: /usr/lib/jvm/zulu21/lib/security/cacerts
+          subPath: cacerts
+          readOnly: true
+        - name: wildfly-cli
+          mountPath: /entrypoint-wildfly-cli/proxy-forwarding.cli
+          subPath: proxy-forwarding.cli
+          readOnly: true
+      volumes:
+      - name: ca-certs
+        configMap:
+          name: life-ca-certs
+          items:
+          - key: life-root-ca-2.pem
+            path: life-root-ca-2.crt
+      - name: cacerts
+        emptyDir: { }
+      - name: wildfly-cli
+        configMap:
+          name: wildfly-cli
