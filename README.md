@@ -1,41 +1,33 @@
-# distance-xt-trust-center
+# DISTANCE:PRO XT — Trust Center
 
-Shared trust/identity services for the distance-xt platform.
+Shared consent management and pseudonymization services for the DISTANCE:PRO XT platform.
 
-Namespace: `distance-xt-trust-center`
+## Introduction
 
-## Components
+The trust center is the privacy-critical part of the platform. It manages patient consent (which data may be used
+for which purpose) and performs pseudonymization (replacing identifying information with pseudonyms). Every DIZ site
+queries these services before transferring data from the clinical into the research domain.
 
-- **gics** — gICS (consent management, University Medicine Greifswald). App + MySQL.
-  - Ingress: `https://gics.distance-xt.life.uni-leipzig.local/gics/...`
-- **gpas** — gPAS (pseudonymization). App + MySQL.
-  - Ingress: `https://gpas.distance-xt.life.uni-leipzig.local/gpas/...`
-- **tc-agent** — FTS-next trust-center agent, with Valkey keystore.
-  - Ingress: `https://tc-agent.distance-xt.life.uni-leipzig.local/`
+## Services
 
-## Database bootstrap
+| Service            | Technology                                                                            | Role                                                                       |
+|--------------------|---------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| Consent Management | [gICS](https://www.ths-greifswald.de/forscher/gics/) (University Medicine Greifswald) | Stores and evaluates patient consent policies (FHIR + Web UI)              |
+| Pseudonymization   | [gPAS](https://www.ths-greifswald.de/forscher/gpas/) (University Medicine Greifswald) | Generates and manages pseudonyms for patient identifiers (FHIR + Web UI)   |
+| Trust Center Agent | [FTS-next](https://github.com/medizininformatik-initiative/fts-next)                  | Orchestrates consent lookups and pseudonymization requests from DIZ agents |
+| Key Store          | [Valkey](https://valkey.io/)                                                          | Stores cryptographic key material used by the trust center agent           |
+| Databases          | MySQL                                                                                 | Persistent storage for gICS and gPAS                                       |
 
-gICS/gPAS do not self-initialize. An initContainer on each db StatefulSet copies the SQL shipped inside the app image (
-`/entrypoint-help-and-usage/examples/compose-g{ics,pas}/sqls/*.sql`) into the MySQL `/docker-entrypoint-initdb.d/`
-volume, stripping `CREATE USER` / `GRANT ALL` lines (the user is already created from `MYSQL_USER`/`MYSQL_PASSWORD`).
-MySQL's first-start guard makes this idempotent.
+## Component Interaction
 
-## Schema migrations — TODO
+The per-site FTS agents (in each DIZ) call the **Trust Center Agent**, which in turn queries **gICS** for consent status
+and **gPAS** for pseudonym generation. Only data with valid consent is pseudonymized and forwarded to the research
+domain.
 
-Mosaic ships numbered upgrade scripts at `/entrypoint-help-and-usage/examples/compose-g{ics,pas}/update_sqls/` inside
-the app image, e.g. `03_update_database_gpas_2025.1.2_2025.2.0.sql`. They are **not applied automatically** and are *
-*not idempotent across versions** (older scripts may `ALTER`/`DROP` against a newer schema).
+## Architecture Context
 
-We need to apply migrations manually.
+This is one of three repositories that make up the DISTANCE:PRO XT platform:
 
-## Required CI variables
-
-Assembled into `gics/gpas-db-credentials` secrets by `.app/apply`:
-
-- `GICS_DB_PASSWORD`, `GICS_DB_ROOT_PASSWORD`
-- `GPAS_DB_PASSWORD`, `GPAS_DB_ROOT_PASSWORD`
-
-## Open items
-
-- Notification services (`TTP_DISABLE_NOTI_*`) currently off — matches the
-  FTS-next test compose. Revisit for prod.
+- **[core](../core)** — Shared terminology and authentication services
+- **trust-center** (this repo) — Consent management and pseudonymization
+- **[diz](../diz)** — Per-site data integration (one instance per rollout partner)
