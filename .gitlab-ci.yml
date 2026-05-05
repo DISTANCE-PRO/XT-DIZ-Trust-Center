@@ -6,6 +6,12 @@ include:
              core/v1/Service, networking.k8s.io/v1/Ingress,
              networking.k8s.io/v1/NetworkPolicy ]
     envsubst: [ 'NONE' ]
+- component: ${CI_SERVER_FQDN}/util/terraform-component/validate@main
+  inputs:
+    stage: test
+- component: ${CI_SERVER_FQDN}/util/terraform-component/plan@main
+  inputs:
+    stage: deploy
 
 # Credentials for gICS/gPAS apps + their MySQL sidecars live in a single
 # per-namespace secret. Added at the root so both gics/ and gpas/ see it.
