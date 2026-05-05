@@ -20,6 +20,7 @@ include:
   - kustomize edit add secret oidc-credentials
     --from-literal=web-client-secret="${TTP_WEB_CLIENT_SECRET}"
     --from-literal=fhir-client-secret="${TTP_FHIR_CLIENT_SECRET}"
+    --from-literal=tc-agent-client-secret="${TC_AGENT_CLIENT_SECRET}"
 
 app/validate:
   variables:

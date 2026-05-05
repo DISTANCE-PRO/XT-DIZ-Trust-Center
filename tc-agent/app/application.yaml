@@ -1,0 +1,41 @@
+deIdentification:
+  keystoreUrl: redis://tc-agent-keystore:6379
+  gpas.fhir:
+    baseUrl: https://gpas.distance-xt.life.uni-leipzig.local/ttp-fhir/fhir/gpas
+    auth:
+      oauth2:
+        registration: agent
+
+consent:
+  gics.fhir:
+    baseUrl: https://gics.distance-xt.life.uni-leipzig.local/ttp-fhir/fhir/gics
+    auth:
+      oauth2:
+        registration: agent
+
+security:
+  endpoints:
+  - path: /api/v2/cd/**
+    role: cd
+  - path: /api/v2/rd/**
+    role: rd
+  auth:
+    oauth2:
+      issuer: https://auth.distance-xt.life.uni-leipzig.local/realms/distance-xt
+
+spring.security.oauth2.client:
+  registration:
+    agent:
+      authorization-grant-type: client_credentials
+      client-id: tc-agent
+      client-secret: ${OAUTH2_CLIENT_SECRET}
+      provider: keycloak
+  provider:
+    keycloak:
+      issuer-uri: https://auth.distance-xt.life.uni-leipzig.local/realms/distance-xt
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: [ "health", "info" ]
