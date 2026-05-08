@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+# Egress must be explicitly allowed, as our default policy denies all.
+- egress.prod-lb.allow.yaml
+
+# Ingress must be explicitly restricted, as our default policy allows all.
+- ingress.gics-db.restrict.yaml
+- ingress.gpas-db.restrict.yaml
+- ingress.tc-agent-keystore.restrict.yaml

@@ -15,4 +15,4 @@ resources:
 - gics/
 - gpas/
 - tc-agent/
-- netpol.yaml
+- netpols/
