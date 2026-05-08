@@ -8,5 +8,5 @@ labels:
     app.kubernetes.io/component: db
 
 resources:
-- svc.yml
-- sts.yml
+- workload.yaml
+- service.yaml
