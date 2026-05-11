@@ -16,9 +16,9 @@ consent:
 security:
   endpoints:
   - path: /api/v2/cd/**
-    role: cd
+    role: cd-agent
   - path: /api/v2/rd/**
-    role: rd
+    role: rd-agent
   auth:
     oauth2:
       issuer: https://auth.distance-xt.life.uni-leipzig.local/realms/distance-xt
