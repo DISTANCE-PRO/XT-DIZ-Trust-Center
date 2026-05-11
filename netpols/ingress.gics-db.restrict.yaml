@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restrict-gics-db-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: gics
+      app.kubernetes.io/component: db
+  policyTypes: [ Ingress ]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: gics
+          app.kubernetes.io/component: app
+    ports:
+    - port: 3306
+      protocol: TCP
