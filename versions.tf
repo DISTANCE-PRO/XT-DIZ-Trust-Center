@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "keycloak" {
-  url           = var.keycloak_provider_url
+  url           = "https://auth.distance-xt.life.uni-leipzig.local"
   client_id     = "terraform"
   client_secret = var.keycloak_provider_client_secret
 }
