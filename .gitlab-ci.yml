@@ -1,5 +1,5 @@
 include:
-- component: $CI_SERVER_FQDN/util/k8s-ci/kustomize@0.3.1
+- component: $CI_SERVER_FQDN/util/k8s-ci/kustomize@1
   inputs:
     prune: [ core/v1/Secret, core/v1/ConfigMap,
              apps/v1/StatefulSet, apps/v1/Deployment,
@@ -15,7 +15,7 @@ include:
 
 # Credentials for gICS/gPAS apps + their MySQL sidecars live in a single
 # per-namespace secret. Added at the root so both gics/ and gpas/ see it.
-.app/apply:
+.kube/apply:
   before_script:
   - kustomize edit add secret gics-db-credentials
     --from-literal=password="${GICS_DB_PASSWORD}"
@@ -28,15 +28,15 @@ include:
     --from-literal=fhir-client-secret="${TTP_FHIR_CLIENT_SECRET}"
     --from-literal=tc-agent-client-secret="${TC_AGENT_CLIENT_SECRET}"
 
-app/validate:
+kube/validate:
   variables:
     CI_ENVIRONMENT_SLUG: res
 
-app/deploy:test:
+kube/deploy:test:
   rules:
   - when: never
 
-app/deploy:prod:
+kube/deploy:prod:
   environment:
     name: res
   rules:
